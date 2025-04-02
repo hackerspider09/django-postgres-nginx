@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    container_name: django_app
+    command: sh -c "python3 manage.py makemigrations &&
+                    python3 manage.py migrate &&
+                    python3 manage.py collectstatic --no-input && 
+                    gunicorn server.wsgi:application --bind 0.0.0.0:8000"
+                    # python3 manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - ./static:/app/static
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+      
+  nginx:
+    build: ./nginx
+    container_name: nginx_server
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    volumes:
+      - ./static:/app/static
+    restart: "on-failure"
+
+  db:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+volumes:
+  postgres_data:
